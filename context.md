@@ -284,6 +284,17 @@ parallel slice loading wrote `slice_cache/`, load ~121 s for 1004 subjects)
   0.713/0.767, w/o site+FIQ 0.681/0.750. FIQ carries the gain.
 - EARLY_STOP_PATIENCE 10 -> 5 (best val loss always at epoch 1-5).
 
+## FreeSurfer region features (step4a + `step4_fuse.py --roi`)
+- ABIDE Preprocessed FreeSurfer 5.1 stats (aseg + lh/rh aparc) from the
+  fcp-indi bucket via FILE_ID; 942/1004 subjects have them (62 failed PCP QC
+  -> imputed + missing flag). 259 features; volumes/areas divided by ICV.
+- Stacker now picks L2 strength with inner 5-fold CV on training folds and
+  tunes the threshold on inner out-of-fold probs (no in-sample bias).
+- Results (3-view, no site, with FIQ): fused cnn+pheno 0.712/0.767,
+  roi_only 0.584/0.625, **cnn+roi+pheno 0.724/0.782** (best).
+- Per-site z-score harmonisation (train-fitted) hurt: 0.694/0.759 -> opt-in
+  `--harmonise`.
+
 ---
 
 ## 8. Conventions / rules for continuing

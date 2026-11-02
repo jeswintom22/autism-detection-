@@ -63,6 +63,8 @@ SLICE_CACHE = os.path.join(THIS_DIR, "slice_cache")
 VIEW_AXIS = {"axial": 2, "coronal": 1, "sagittal": 0}
 SLICE_SELECT = "spread"      # or "area" (max-coverage slices in middle half)
 PHENO_CSV = os.path.join(THIS_DIR, "abide_phenotypic.csv")  # ABIDE I, step4
+FS_CACHE = os.path.join(THIS_DIR, "freesurfer_stats")       # step4a downloads
+FS_FEATURES = os.path.join(THIS_DIR, "freesurfer_features.csv")
 
 IMAGENET_MEAN = (0.485, 0.456, 0.406)
 IMAGENET_STD = (0.229, 0.224, 0.225)

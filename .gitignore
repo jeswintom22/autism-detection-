@@ -11,5 +11,7 @@ manifest.csv
 step1_summary.json
 step2_summary.json
 abide_phenotypic.csv
+freesurfer_stats/
+freesurfer_features.csv
 results_*.json
 .ipynb_checkpoints/

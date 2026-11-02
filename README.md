@@ -72,6 +72,8 @@ python step3_classify.py --n-slices 9 --view coronal  --models saved_models_co -
 python step3_classify.py --n-slices 9 --view sagittal --models saved_models_sa --results results_sa
 python ensemble_eval.py results_ax results_co results_sa --out results_ensemble.json
 python step4_fuse.py results_ax results_co results_sa      # + age/sex/FIQ/site
+python step4a_fetch_freesurfer.py                          # ABIDE FreeSurfer ROI stats
+python step4_fuse.py results_ax results_co results_sa --roi --no-site   # best
 python demo.py --model "saved_models_ax,saved_models_co,saved_models_sa" --ensemble
 ```
 
@@ -83,7 +85,8 @@ step1_collect_data.py
 step2_preprocess.py
 step3_classify.py
 ensemble_eval.py     average val_probs.json across runs (view ensemble)
-step4_fuse.py        per-fold stacker: CNN prob + ABIDE phenotype (auto-downloaded)
+step4a_fetch_freesurfer.py  download ABIDE FreeSurfer 5.1 stats -> region feature csv
+step4_fuse.py        per-fold stacker: CNN prob + ABIDE phenotype (+ --roi features)
 run_all.py
 demo.py
 preprocessed_dataset/   (generated, git-ignored)
