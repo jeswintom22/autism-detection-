@@ -52,7 +52,7 @@ LR = 1e-4
 WEIGHT_DECAY = 1e-5
 N_FOLDS = 5
 SEED = 42
-EARLY_STOP_PATIENCE = 10
+EARLY_STOP_PATIENCE = 5    # val loss bottoms out at epoch 1-5 in every run
 LR_PATIENCE = 5
 LR_FACTOR = 0.2
 LR_MIN = 1e-6
@@ -62,6 +62,7 @@ BACKBONE_LR_MULT = 0.1       # layer4 learns at LR * this (head gets full LR)
 SLICE_CACHE = os.path.join(THIS_DIR, "slice_cache")
 VIEW_AXIS = {"axial": 2, "coronal": 1, "sagittal": 0}
 SLICE_SELECT = "spread"      # or "area" (max-coverage slices in middle half)
+PHENO_CSV = os.path.join(THIS_DIR, "abide_phenotypic.csv")  # ABIDE I, step4
 
 IMAGENET_MEAN = (0.485, 0.456, 0.406)
 IMAGENET_STD = (0.229, 0.224, 0.225)

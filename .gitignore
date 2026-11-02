@@ -10,4 +10,6 @@ results_*/
 manifest.csv
 step1_summary.json
 step2_summary.json
+abide_phenotypic.csv
+results_*.json
 .ipynb_checkpoints/

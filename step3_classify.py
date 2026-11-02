@@ -28,7 +28,8 @@ import torch
 import torch.nn as nn
 from torch.utils.data import DataLoader, Dataset
 from torchvision import models
-from sklearn.metrics import (accuracy_score, confusion_matrix, f1_score,
+from sklearn.metrics import (accuracy_score, balanced_accuracy_score,
+                             confusion_matrix, f1_score,
                              precision_score, recall_score, roc_auc_score)
 from sklearn.model_selection import StratifiedGroupKFold
 
@@ -384,10 +385,13 @@ def eval_probs(model, ds, device, batch, tta):
     return p
 
 
-def best_threshold(y, p):
-    """Max-F1 operating point, tuned on TRAIN subjects only."""
+def best_threshold(y, p, metric="bacc"):
+    """Operating point maximising balanced accuracy (or F1), tuned on TRAIN
+    subjects only. F1 favours predicting the positive class -> lower acc."""
     ths = np.linspace(0.05, 0.95, 181)
-    f1s = [f1_score(y, (p > t).astype(int), zero_division=0) for t in ths]
+    score = (lambda pr: f1_score(y, pr, zero_division=0)) if metric == "f1" \
+        else (lambda pr: balanced_accuracy_score(y, pr))
+    f1s = [score((p > t).astype(int)) for t in ths]
     best = np.flatnonzero(np.isclose(f1s, max(f1s), atol=1e-6))
     return float(ths[int(best[len(best) // 2])])
 
@@ -478,7 +482,7 @@ def run_cv(X, y, groups, args, device, subjects):
         # operating point tuned on TRAIN subjects only (no val peeking)
         prob_tr = eval_probs(model, tr_eval, device, args.batch, not args.no_tta)
         ys_tr, ps_tr = subject_level(y[tr], prob_tr, groups[tr])
-        thr = best_threshold(ys_tr, ps_tr)
+        thr = best_threshold(ys_tr, ps_tr, args.thr_metric)
 
         prob = eval_probs(model, va_ds, device, args.batch, not args.no_tta)
         ys, ps = subject_level(y[va], prob, groups[va])
@@ -602,6 +606,8 @@ def main(argv=None):
     ap.add_argument("--workers", type=int, default=4,
                     help="dataloader workers for the train loader "
                          "(overlaps CPU aug with GPU compute; 0 disables)")
+    ap.add_argument("--thr-metric", choices=["bacc", "f1"], default="bacc",
+                    help="criterion for the train-tuned decision threshold")
     ap.add_argument("--models", default=config.SAVED_MODELS_DIR)
     ap.add_argument("--results", default=config.RESULTS_DIR)
     args = ap.parse_args(argv)

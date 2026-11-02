@@ -71,6 +71,7 @@ python step3_classify.py --n-slices 9 --view axial    --models saved_models_ax -
 python step3_classify.py --n-slices 9 --view coronal  --models saved_models_co --results results_co
 python step3_classify.py --n-slices 9 --view sagittal --models saved_models_sa --results results_sa
 python ensemble_eval.py results_ax results_co results_sa --out results_ensemble.json
+python step4_fuse.py results_ax results_co results_sa      # + age/sex/FIQ/site
 python demo.py --model "saved_models_ax,saved_models_co,saved_models_sa" --ensemble
 ```
 
@@ -82,6 +83,7 @@ step1_collect_data.py
 step2_preprocess.py
 step3_classify.py
 ensemble_eval.py     average val_probs.json across runs (view ensemble)
+step4_fuse.py        per-fold stacker: CNN prob + ABIDE phenotype (auto-downloaded)
 run_all.py
 demo.py
 preprocessed_dataset/   (generated, git-ignored)

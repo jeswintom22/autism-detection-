@@ -270,6 +270,20 @@ parallel slice loading wrote `slice_cache/`, load ~121 s for 1004 subjects)
 - Verified: coronal+area smoke (2.8 s load/16 subj), 2-view ensemble_eval,
   4-checkpoint cross-view demo.
 
+## Full 3-view runs + phenotype fusion
+- Dataset = ABIDE I (IDs 50002-51607, 20 sites, native space, mixed
+  shapes/voxel sizes). All 1004 IDs match the ABIDE phenotypic CSV and
+  labels agree 100%.
+- Views (F1-threshold): axial 0.641/0.746 AUC, coronal 0.648/0.717,
+  sagittal 0.650/0.712, 3-view ensemble 0.660/0.749.
+- Threshold criterion switched to balanced accuracy (`--thr-metric`,
+  default `bacc`); max-F1 was biasing toward predicting ASD.
+- `step4_fuse.py`: per-fold logistic stacker on out-of-fold CNN prob +
+  age/sex/FIQ(/site); impute/scale/threshold fit on training folds only.
+  3-view: cnn_only 0.698/0.749, fused 0.718/0.764, fused w/o site
+  0.713/0.767, w/o site+FIQ 0.681/0.750. FIQ carries the gain.
+- EARLY_STOP_PATIENCE 10 -> 5 (best val loss always at epoch 1-5).
+
 ---
 
 ## 8. Conventions / rules for continuing
