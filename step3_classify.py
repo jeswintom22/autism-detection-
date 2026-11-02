@@ -31,7 +31,7 @@ from torchvision import models
 from sklearn.metrics import (accuracy_score, balanced_accuracy_score,
                              confusion_matrix, f1_score,
                              precision_score, recall_score, roc_auc_score)
-from sklearn.model_selection import StratifiedGroupKFold
+from sklearn.model_selection import StratifiedGroupKFold, StratifiedKFold
 
 import matplotlib
 matplotlib.use("Agg")
@@ -143,6 +143,8 @@ def _load_one(f, n_slices, img_size, planes, axis, select, cache_dir):
             tag = f"_n{n_slices}_p{planes}"
             if axis != 2 or select != "spread":
                 tag += f"_a{axis}_s{select}"
+            if img_size != config.IMG_SIZE:
+                tag += f"_i{img_size}"
             cpath = os.path.join(cache_dir, f"{key}{tag}.npy")
             if os.path.exists(cpath):
                 return np.load(cpath)
@@ -243,28 +245,45 @@ class SliceDataset(Dataset):
 
 
 # ------------------------------------------------------------------- model
+def _head(in_f):
+    """512x256 SiLU/BN/Dropout head - identical to the paper's Keras head."""
+    return nn.Sequential(
+        nn.Linear(in_f, 512), nn.SiLU(), nn.BatchNorm1d(512), nn.Dropout(0.5),
+        nn.Linear(512, 256), nn.SiLU(), nn.BatchNorm1d(256), nn.Dropout(0.3),
+        nn.Linear(256, 1),
+    )
+
+
 def build_model(backbone=config.BACKBONE):
-    if backbone == "resnet101":
-        m = models.resnet101(weights=models.ResNet101_Weights.IMAGENET1K_V2)
-    elif backbone == "resnet50":
-        m = models.resnet50(weights=models.ResNet50_Weights.IMAGENET1K_V2)
+    if backbone in ("resnet101", "resnet50"):
+        m = (models.resnet101 if backbone == "resnet101" else models.resnet50)(
+            weights=models.ResNet101_Weights.IMAGENET1K_V2
+            if backbone == "resnet101" else models.ResNet50_Weights.IMAGENET1K_V2)
+        for p in m.parameters():
+            p.requires_grad_(False)
+        for p in m.layer4.parameters():      # ~ last 30 layers trainable
+            p.requires_grad_(True)
+        in_f = m.fc.in_features
+        m.fc = _head(in_f)
+    elif backbone == "efficientnet_b5":
+        # paper replica: Keras 'train last ~30 layers' ~= last two MBConv
+        # blocks + top conv in torchvision's features sequential
+        m = models.efficientnet_b5(
+            weights=models.EfficientNet_B5_Weights.IMAGENET1K_V1)
+        for p in m.parameters():
+            p.requires_grad_(False)
+        for blk in list(m.features)[-2:]:
+            for p in blk.parameters():
+                p.requires_grad_(True)
+        in_f = m.classifier[1].in_features   # 2048 (B5)
+        m.classifier = _head(in_f)
     else:
         raise ValueError(f"unknown backbone {backbone}")
-    for p in m.parameters():
-        p.requires_grad_(False)
-    for p in m.layer4.parameters():          # ~ last 30 layers trainable
-        p.requires_grad_(True)
     for mod in m.modules():                  # keep every backbone BN frozen
         if isinstance(mod, nn.BatchNorm2d):
             mod.eval()
             for p in mod.parameters():
                 p.requires_grad_(False)
-    in_f = m.fc.in_features
-    m.fc = nn.Sequential(
-        nn.Linear(in_f, 512), nn.SiLU(), nn.BatchNorm1d(512), nn.Dropout(0.5),
-        nn.Linear(512, 256), nn.SiLU(), nn.BatchNorm1d(256), nn.Dropout(0.3),
-        nn.Linear(256, 1),
-    )
     return m
 
 
@@ -288,7 +307,7 @@ def train_fold(model, tr_ds, va_loader, args, device):
     bb, head = [], []
     for n, p in model.named_parameters():
         if p.requires_grad:
-            (bb if n.startswith("layer4") else head).append(p)
+            (bb if n.startswith(("layer4", "features")) else head).append(p)
     opt = torch.optim.AdamW(
         [{"params": bb, "lr": args.lr * args.bb_lr_mult},
          {"params": head, "lr": args.lr}],
@@ -354,7 +373,7 @@ def train_fold(model, tr_ds, va_loader, args, device):
                           for k, v in model.state_dict().items()}
         else:
             bad += 1
-            if bad >= config.EARLY_STOP_PATIENCE:
+            if bad >= args.early_stop:
                 print(f"  early stop at epoch {ep}")
                 break
     if best_state is not None:
@@ -451,6 +470,8 @@ def save_model(model, path, args, fold, metrics):
         "planes": args.planes,
         "axis": getattr(args, "axis", 2),
         "select": getattr(args, "slice_select", "spread"),
+        "img_size": args.img_size,
+        "split": getattr(args, "split", "group"),
         "tta": not args.no_tta,
         "threshold": (metrics or {}).get("threshold", config.THRESHOLD),
         "fold": fold,
@@ -459,15 +480,29 @@ def save_model(model, path, args, fold, metrics):
 
 
 def run_cv(X, y, groups, args, device, subjects):
-    skf = StratifiedGroupKFold(n_splits=args.folds, shuffle=True,
-                               random_state=config.SEED)
     pin = device.type == "cuda"
     folds, cms, best_f1 = {}, [], -1.0
     fold_probs = {}
+    slice_split = getattr(args, "split", "group") == "slice"
+    if slice_split:
+        # paper-replica mode: StratifiedKFold over SLICE rows - the same
+        # subject lands in train AND validation; metrics are inflated
+        print("WARNING: --split slice - slices of the SAME SUBJECT appear "
+              "in both train and validation (faithful replica of the "
+              "reference method). Metrics are inflated and NOT comparable "
+              "to subject-level results.")
+        splits = StratifiedKFold(
+            n_splits=args.folds, shuffle=True,
+            random_state=config.SEED).split(X, y)
+    else:
+        splits = StratifiedGroupKFold(
+            n_splits=args.folds, shuffle=True,
+            random_state=config.SEED).split(X, y, groups)
 
-    for k, (tr, va) in enumerate(skf.split(X, y, groups), 1):
+    for k, (tr, va) in enumerate(splits, 1):
         print(f"\n===== Fold {k}/{args.folds} =====")
-        assert not set(groups[tr]) & set(groups[va]), "subject leakage!"
+        if not slice_split:
+            assert not set(groups[tr]) & set(groups[va]), "subject leakage!"
         model = build_model(args.backbone).to(device)
         if pin:
             model = model.to(memory_format=torch.channels_last)
@@ -479,38 +514,78 @@ def run_cv(X, y, groups, args, device, subjects):
         hist = train_fold(model, tr_ds, va_loader, args, device)
         plot_history(hist, k, args.results)
 
-        # operating point tuned on TRAIN subjects only (no val peeking)
-        prob_tr = eval_probs(model, tr_eval, device, args.batch, not args.no_tta)
-        ys_tr, ps_tr = subject_level(y[tr], prob_tr, groups[tr])
-        thr = best_threshold(ys_tr, ps_tr, args.thr_metric)
+        # operating point tuned on TRAIN subjects only (no val peeking);
+        # the replica uses the paper's fixed 0.5 instead
+        if slice_split:
+            thr = 0.5
+        else:
+            prob_tr = eval_probs(model, tr_eval, device, args.batch,
+                                 not args.no_tta)
+            ys_tr, ps_tr = subject_level(y[tr], prob_tr, groups[tr])
+            thr = best_threshold(ys_tr, ps_tr, args.thr_metric)
 
         prob = eval_probs(model, va_ds, device, args.batch, not args.no_tta)
         ys, ps = subject_level(y[va], prob, groups[va])
-        pred = (ps > thr).astype(int)
-        try:
-            auc = roc_auc_score(ys, ps)
-        except ValueError:
-            auc = float("nan")
-        m = {
-            "accuracy": float(accuracy_score(ys, pred)),
-            "precision": float(precision_score(ys, pred, zero_division=0)),
-            "recall": float(recall_score(ys, pred, zero_division=0)),
-            "f1": float(f1_score(ys, pred, zero_division=0)),
-            "auc": float(auc),
-            "threshold": thr,
-        }
+        if slice_split:
+            # faithful: metrics on SLICES at the fixed 0.5 threshold
+            pred_sl = (prob > thr).astype(int)
+            y_sl = y[va]
+            try:
+                auc_sl = roc_auc_score(y_sl, prob)
+            except ValueError:
+                auc_sl = float("nan")
+            m = {
+                "accuracy": float(accuracy_score(y_sl, pred_sl)),
+                "precision": float(precision_score(y_sl, pred_sl,
+                                                   zero_division=0)),
+                "recall": float(recall_score(y_sl, pred_sl,
+                                             zero_division=0)),
+                "f1": float(f1_score(y_sl, pred_sl, zero_division=0)),
+                "auc": float(auc_sl),
+                "threshold": thr,
+                "split": "slice",
+            }
+            # subject-level still computed - for information only, the
+            # headline slice metrics are the paper-comparable ones
+            sp = (ps > thr).astype(int)
+            m["subject_level"] = {
+                "accuracy": float(accuracy_score(ys, sp)),
+                "f1": float(f1_score(ys, sp, zero_division=0)),
+                "auc": float(roc_auc_score(ys, ps)),
+            }
+            print("  subject-level (informational, still inflated): "
+                  + str({a: round(b, 4) for a, b in
+                         m["subject_level"].items()}))
+        else:
+            pred = (ps > thr).astype(int)
+            try:
+                auc = roc_auc_score(ys, ps)
+            except ValueError:
+                auc = float("nan")
+            m = {
+                "accuracy": float(accuracy_score(ys, pred)),
+                "precision": float(precision_score(ys, pred, zero_division=0)),
+                "recall": float(recall_score(ys, pred, zero_division=0)),
+                "f1": float(f1_score(ys, pred, zero_division=0)),
+                "auc": float(auc),
+                "threshold": thr,
+            }
         save_model(model, os.path.join(args.models, f"model_fold_{k}.pt"),
                    args, k, m)
         folds[f"fold_{k}"] = m
-        cm = confusion_matrix(ys, pred, labels=[0, 1])
+        cm = confusion_matrix(y_sl if slice_split else ys,
+                              pred_sl if slice_split else pred,
+                              labels=[0, 1])
         cms.append(cm)
         plot_cm(cm, f"Fold {k}", args.results)
-        print({a: round(b, 4) for a, b in m.items()})
+        print({a: round(b, 4) for a, b in m.items()
+               if isinstance(b, (int, float))})
 
         # per-subject held-out probabilities, joined by basename across runs
         # (e.g. axial/coronal/sagittal) for ensemble_eval.py
         ids = np.unique(groups[va])
         fold_probs[f"fold_{k}"] = {
+            "split": args.split,
             "threshold": thr,
             "subjects": [
                 {"file": os.path.basename(subjects[g]),
@@ -537,10 +612,11 @@ def run_cv(X, y, groups, args, device, subjects):
             args.results, fmt=".1f")
     os.makedirs(args.results, exist_ok=True)
     with open(os.path.join(args.results, "all_metrics.json"), "w") as f:
-        json.dump({"fold_metrics": folds, "overall_metrics": overall}, f, indent=4)
+        json.dump({"split": args.split, "fold_metrics": folds,
+                   "overall_metrics": overall}, f, indent=4)
     with open(os.path.join(args.results, "val_probs.json"), "w") as f:
         json.dump(fold_probs, f)
-    print("\nOverall (subject-level):")
+    print(f"\nOverall ({args.split}-level):")
     for mt, s in overall.items():
         print(f"  {mt}: {s['mean']:.3f} +/- {s['std']:.3f}")
 
@@ -571,7 +647,13 @@ def main(argv=None):
     ap.add_argument("--raw", action="store_true",
                     help="train on the raw control/treatment folders (ablation)")
     ap.add_argument("--backbone", default=config.BACKBONE,
-                    choices=["resnet101", "resnet50"])
+                    choices=["resnet101", "resnet50", "efficientnet_b5"])
+    ap.add_argument("--img-size", type=int, default=config.IMG_SIZE,
+                    help="square crop resize for slices (paper replica = 456)")
+    ap.add_argument("--split", default="group", choices=["group", "slice"],
+                    help="group = subject-level CV (default, honest); slice = "
+                         "paper replica - StratifiedKFold over slices, same "
+                         "subject in train+val -> INFLATED metrics")
     ap.add_argument("--folds", type=int, default=config.N_FOLDS)
     ap.add_argument("--epochs", type=int, default=config.EPOCHS)
     ap.add_argument("--batch", type=int, default=config.BATCH)
@@ -606,6 +688,8 @@ def main(argv=None):
     ap.add_argument("--workers", type=int, default=4,
                     help="dataloader workers for the train loader "
                          "(overlaps CPU aug with GPU compute; 0 disables)")
+    ap.add_argument("--early-stop", type=int, default=config.EARLY_STOP_PATIENCE,
+                    help="early-stop patience on val loss")
     ap.add_argument("--thr-metric", choices=["bacc", "f1"], default="bacc",
                     help="criterion for the train-tuned decision threshold")
     ap.add_argument("--models", default=config.SAVED_MODELS_DIR)
@@ -614,6 +698,12 @@ def main(argv=None):
     if args.folds < 2:
         ap.error("--folds must be >= 2 (StratifiedGroupKFold)")
     args.axis = config.VIEW_AXIS[args.view]
+    if args.split == "slice":
+        # faithful paper replica: no augmentation, no TTA, uniform LR,
+        # patience 10, fixed 0.5 threshold (all as in the reference code)
+        args.no_augment = args.no_tta = True
+        args.bb_lr_mult = 1.0
+        args.early_stop = 10
 
     root = config.DATA_ROOT if args.raw else args.data_dir
     if not os.path.isdir(os.path.join(root, "control")):
@@ -630,7 +720,8 @@ def main(argv=None):
           "| data:", os.path.abspath(root),
           f"| slices={args.n_slices} planes={args.planes} view={args.view} "
           f"sel={args.slice_select} "
-          f"tta={not args.no_tta} aug={not args.no_augment}")
+          f"tta={not args.no_tta} aug={not args.no_augment} "
+          f"split={args.split} img={args.img_size}")
     if device.type == "cuda":
         print("gpu:", torch.cuda.get_device_name(0))
 
@@ -646,7 +737,7 @@ def main(argv=None):
 
     t0 = time.time()
     X, y, groups, subjects = load_dataset(
-        pairs, args.n_slices, config.IMG_SIZE, planes=args.planes,
+        pairs, args.n_slices, args.img_size, planes=args.planes,
         axis=args.axis, select=args.slice_select,
         cache_dir=args.cache_dir or None, jobs=args.jobs)
     print(f"loaded in {time.time() - t0:.0f}s")

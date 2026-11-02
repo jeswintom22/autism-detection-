@@ -54,6 +54,10 @@ def load_cnn(dirs):
             sys.exit(f"missing {p}")
         with open(p) as f:
             runs.append(json.load(f))
+    for d, r in zip(dirs, runs):
+        if any(f.get("split") == "slice" for f in r.values()):
+            print(f"WARNING: {d} used --split slice - probabilities are "
+                  "leaky; fused metrics will be inflated")
     out = {}
     for fk in sorted(set.intersection(*[set(r) for r in runs])):
         maps = [{int(re.match(r"(\d+)", s["file"]).group(1)): (s["y"], s["p"])

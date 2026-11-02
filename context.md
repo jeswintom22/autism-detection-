@@ -295,6 +295,20 @@ parallel slice loading wrote `slice_cache/`, load ~121 s for 1004 subjects)
 - Per-site z-score harmonisation (train-fitted) hurt: 0.694/0.759 -> opt-in
   `--harmonise`.
 
+## EfficientNetB5 paper replica (branch effnet-b5-replica)
+- `--backbone efficientnet_b5` + `--img-size` + `--split {group,slice}` in
+  step3. slice mode = faithful replica of the reference code: slice-level
+  StratifiedKFold (leak: same subject in train+val), thr 0.5, no aug/TTA,
+  uniform LR, patience 10, slice-level metrics. Outputs tagged
+  `"split": "slice"`; banner warns; subject-level metrics still recorded.
+- B5 head identical to resnet head (512->256, SiLU/BN/Dropout); trainable =
+  last two features blocks (~last 30 Keras layers); backbone BNs frozen.
+- Cache tag gains `i<img_size>` when !=224; checkpoints store img_size and
+  split; demo reads img_size from checkpoint.
+- ensemble_eval/step4_fuse warn when fed slice-level val_probs.
+- Smoke (16 subj, 2 ep): slice mode ran, AUC 0.896 already inflated;
+  group mode unchanged.
+
 ---
 
 ## 8. Conventions / rules for continuing

@@ -78,6 +78,11 @@ def main(argv=None):
                     help="step3: disable flip test-time augmentation")
     ap.add_argument("--workers", type=int, default=4,
                     help="step3: dataloader workers for the train loader")
+    ap.add_argument("--img-size", type=int, default=config.IMG_SIZE,
+                    help="step3: slice resize (paper replica = 456)")
+    ap.add_argument("--split", default="group", choices=["group", "slice"],
+                    help="step3: group = subject-level CV; slice = paper "
+                         "replica (inflated metrics)")
     ap.add_argument("--view", default="axial", choices=list(config.VIEW_AXIS),
                     help="step3: anatomical plane for planes=1")
     ap.add_argument("--slice-select", default=config.SLICE_SELECT,
@@ -100,6 +105,7 @@ def main(argv=None):
           "--lr", str(args.lr), "--smooth", str(args.smooth),
           "--bb-lr-mult", str(args.bb_lr_mult), "--jobs", str(args.jobs),
           "--view", args.view, "--slice-select", args.slice_select,
+          "--img-size", str(args.img_size), "--split", args.split,
           "--workers", str(args.workers)]
     if args.no_augment:
         s3 += ["--no-augment"]

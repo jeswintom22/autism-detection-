@@ -51,6 +51,10 @@ def main(argv=None):
         thrs = []
         for d in args.dirs:
             fd = runs[d][fk]
+            if fd.get("split") == "slice":
+                print(f"  WARNING: {d} used --split slice - these held-out "
+                      "probabilities came from a leaky split (same subject "
+                      "in train+val); ensemble metrics are inflated")
             thrs.append(fd["threshold"])
             maps.append({s["file"]: (s["y"], s["p"]) for s in fd["subjects"]})
         common = set.intersection(*[set(m) for m in maps])

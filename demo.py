@@ -29,7 +29,8 @@ def default_scan():
     return None
 
 
-def subject_input(path, n_slices, planes, axis=2, select="spread"):
+def subject_input(path, n_slices, planes, axis=2, select="spread",
+                  img_size=config.IMG_SIZE):
     """(n_slices,H,W,3) uint8 ready for the model."""
     import step2_preprocess as s2
 
@@ -43,7 +44,7 @@ def subject_input(path, n_slices, planes, axis=2, select="spread"):
         sl = np.take(data, idx, axis=a)
         if not filtered:
             sl = s2.nimble_filter_slice(sl)
-        return s3.prep_gray(sl)
+        return s3.prep_gray(sl, img_size)
 
     if planes == 1:
         idxs = s3.select_indices(data, axis, n_slices, select)
@@ -97,7 +98,8 @@ def main(argv=None):
         model.load_state_dict(ckpt["state_dict"])
         model.eval()
         cfg = (ckpt.get("n_slices", config.N_SLICES), ckpt.get("planes", 1),
-               ckpt.get("axis", 2), ckpt.get("select", "spread"))
+               ckpt.get("axis", 2), ckpt.get("select", "spread"),
+               ckpt.get("img_size", config.IMG_SIZE))
         if cfg not in arrs:
             arrs[cfg] = subject_input(path, *cfg)
         thrs.append(ckpt.get("threshold", config.THRESHOLD))

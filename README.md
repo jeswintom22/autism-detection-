@@ -77,6 +77,18 @@ python step4_fuse.py results_ax results_co results_sa --roi --no-site   # best
 python demo.py --model "saved_models_ax,saved_models_co,saved_models_sa" --ensemble
 ```
 
+## Paper-replica mode (slice-level — INFLATED metrics)
+
+Reproduces the reference EfficientNetB5 pipeline exactly: B5 @ 456x456,
+3 mid axial slices, StratifiedKFold over SLICES (same subject in train
+and validation), fixed 0.5 threshold, no augmentation/TTA, uniform LR,
+patience 10. Metrics come out ~90% because the split leaks; every output
+is tagged `"split": "slice"` so it cannot be confused with honest results.
+
+```powershell
+python step3_classify.py --backbone efficientnet_b5 --img-size 456 --n-slices 3 --split slice --batch 16 --models saved_models_b5 --results results_b5
+```
+
 ## Layout
 
 ```
