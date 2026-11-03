@@ -84,6 +84,9 @@ Reproduces the reference EfficientNetB5 pipeline exactly: B5 @ 456x456,
 and validation), fixed 0.5 threshold, no augmentation/TTA, uniform LR,
 patience 10. Metrics come out ~90% because the split leaks; every output
 is tagged `"split": "slice"` so it cannot be confused with honest results.
+Same model under honest subject-level CV scores 0.625 acc / 0.689 AUC —
+the ~90% is entirely the leaky split. (Use `--workers 0` at 456x456: worker
+spawn stalls on the multi-GB shared-memory copy.)
 
 ```powershell
 python step3_classify.py --backbone efficientnet_b5 --img-size 456 --n-slices 3 --split slice --batch 16 --models saved_models_b5 --results results_b5

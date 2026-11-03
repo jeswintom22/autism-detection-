@@ -309,6 +309,19 @@ parallel slice loading wrote `slice_cache/`, load ~121 s for 1004 subjects)
 - Smoke (16 subj, 2 ep): slice mode ran, AUC 0.896 already inflated;
   group mode unchanged.
 
+## B5 results (real run)
+- `--split slice` replica: **0.965 +/- 0.009 acc / 0.993 AUC** slice-level —
+  reproduces the paper's ~95% claim; driven entirely by same-subject slices
+  in train+val (saved_models_b5, results_b5).
+- `--split group` honest B5: **0.625 +/- 0.024 acc / 0.689 AUC**
+  (saved_models_b5h, results_b5h, log in results_b5h_log.txt) — B5 is the
+  weakest backbone tried; the ~90% was pure leakage.
+- Known issue: DataLoader `--workers >0` hangs on Windows spawn for 456²
+  (~1.5 GB tensor shared-mem copy stalls) — honest run used `--workers 0`.
+- 4-run CNN ensemble (+B5): 0.667/0.752 (vs 0.660/0.749 for 3 views).
+- Fused cnn+roi+pheno with B5: 0.704/0.781 — does NOT beat 3-view fused
+  (0.724/0.782). **Best honest result stays: 3 ResNet views + ROI + pheno.**
+
 ---
 
 ## 8. Conventions / rules for continuing
