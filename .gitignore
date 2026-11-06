@@ -15,3 +15,4 @@ freesurfer_stats/
 freesurfer_features.csv
 results_*.json
 .ipynb_checkpoints/
+.pytest_cache/

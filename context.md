@@ -1,5 +1,18 @@
 # Project Context — ASD Detection from sMRI
 
+> **Update (patient-safe rebuild, branch `rebuild/patient-safe-effnet-rf`):** the recommended workflow is now
+> the `asd_training` package (`python -m asd_training`, see `docs/patient_safe_training.md`):
+> fresh RAS/1 mm preprocessing, frozen EfficientNet embeddings + masked GLCM/LBP + age/sex/FIQ,
+> Random Forests, patient-level 80/20 locked split and nested patient-grouped CV. `run_all.py` is now a thin
+> wrapper for `prepare` + `train` (never scores the test set). Everything below describes the legacy
+> pipeline and its historical results; the legacy scripts, models and `results*` remain intact for `demo.py`.
+> The new test split is an internal, historically explored holdout; the >80% accuracy target is not guaranteed.
+> **Result (run `runs/hybrid/r2`):** 1004 rows / 1003 unique people (byte-identical scans 50279+50286 grouped
+> under one `person_id`), 803 dev / 201 locked test patients, patient-disjoint nested CV. Frozen primary
+> (EfficientNet-B0 + GLCM/LBP + age/sex/FIQ, Random Forest): **test accuracy 0.7164** [0.6505, 0.7742],
+> balanced 0.7168, ROC-AUC 0.8183 — honest, leakage-free; the >80% target was NOT met. Full evidence:
+> `runs/hybrid/r2/report.md`.
+
 Handoff document for anyone (human or agent) continuing this work. Read this
 first, then `README.md` for usage. Last updated: 2026-11-01.
 
