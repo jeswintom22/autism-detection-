@@ -1,0 +1,294 @@
+{
+  "backbone": "efficientnet_b5",
+  "extraction_failures": {
+    "50011": "axial slice 188: insufficient brain pixels"
+  },
+  "families": {
+    "cnn_only": {
+      "fold_accuracies": [
+        0.746330656327887,
+        0.7712545001384657,
+        0.7682082525616173,
+        0.7482691775131542,
+        0.7313019390581718
+      ],
+      "mean_accuracy": 0.7530729051198592,
+      "pooled_slice_metrics": {
+        "accuracy": 0.7530741110003324,
+        "auroc": 0.8213712723310622,
+        "balanced_accuracy": 0.7525516199948398,
+        "confusion": [
+          [
+            7778,
+            1294
+          ],
+          [
+            3164,
+            5818
+          ]
+        ],
+        "n": 18054,
+        "sensitivity": 0.6477399242930305,
+        "specificity": 0.857363315696649
+      },
+      "std_accuracy": 0.014846937869842173,
+      "subject_vote_metrics": {
+        "accuracy": 0.8325024925224327,
+        "auroc": 0.9454186150077933,
+        "balanced_accuracy": 0.8317329102649744,
+        "confusion": [
+          [
+            497,
+            7
+          ],
+          [
+            161,
+            338
+          ]
+        ],
+        "n": 1003,
+        "sensitivity": 0.6773547094188377,
+        "specificity": 0.9861111111111112
+      }
+    },
+    "combined": {
+      "fold_accuracies": [
+        0.7698698421489892,
+        0.7975630019385211,
+        0.7900858487953476,
+        0.7765162004984769,
+        0.7551246537396122
+      ],
+      "mean_accuracy": 0.7778319094241894,
+      "pooled_slice_metrics": {
+        "accuracy": 0.7778331671651711,
+        "auroc": 0.8639665120462362,
+        "balanced_accuracy": 0.7776086785564074,
+        "confusion": [
+          [
+            7463,
+            1609
+          ],
+          [
+            2402,
+            6580
+          ]
+        ],
+        "n": 18054,
+        "sensitivity": 0.7325762636383879,
+        "specificity": 0.8226410934744268
+      },
+      "std_accuracy": 0.014968100132735042,
+      "subject_vote_metrics": {
+        "accuracy": 0.9022931206380858,
+        "auroc": 0.9804370646054013,
+        "balanced_accuracy": 0.9018831313420492,
+        "confusion": [
+          [
+            496,
+            8
+          ],
+          [
+            90,
+            409
+          ]
+        ],
+        "n": 1003,
+        "sensitivity": 0.8196392785571143,
+        "specificity": 0.9841269841269841
+      }
+    },
+    "deep_only": {
+      "fold_accuracies": [
+        0.7308224868457491,
+        0.7452229299363057,
+        0.760177236222653,
+        0.7166989753530878,
+        0.7005540166204987
+      ],
+      "mean_accuracy": 0.7306951289956588,
+      "pooled_slice_metrics": {
+        "accuracy": 0.7306967984934086,
+        "auroc": 0.7970802655182989,
+        "balanced_accuracy": 0.7305354757133313,
+        "confusion": [
+          [
+            6921,
+            2151
+          ],
+          [
+            2711,
+            6271
+          ]
+        ],
+        "n": 18054,
+        "sensitivity": 0.6981741260298374,
+        "specificity": 0.7628968253968254
+      },
+      "std_accuracy": 0.0209028554926618,
+      "subject_vote_metrics": {
+        "accuracy": 0.8604187437686939,
+        "auroc": 0.9420269109647867,
+        "balanced_accuracy": 0.8598586061010911,
+        "confusion": [
+          [
+            490,
+            14
+          ],
+          [
+            126,
+            373
+          ]
+        ],
+        "n": 1003,
+        "sensitivity": 0.7474949899799599,
+        "specificity": 0.9722222222222222
+      }
+    },
+    "mri_hybrid": {
+      "fold_accuracies": [
+        0.76626973137635,
+        0.7917474383827194,
+        0.7884242592079757,
+        0.7704237053447799,
+        0.7509695290858726
+      ],
+      "mean_accuracy": 0.7735669326795395,
+      "pooled_slice_metrics": {
+        "accuracy": 0.7735681843358813,
+        "auroc": 0.8570827292935861,
+        "balanced_accuracy": 0.7733333730953971,
+        "confusion": [
+          [
+            7443,
+            1629
+          ],
+          [
+            2459,
+            6523
+          ]
+        ],
+        "n": 18054,
+        "sensitivity": 0.7262302382542863,
+        "specificity": 0.8204365079365079
+      },
+      "std_accuracy": 0.015000284086031523,
+      "subject_vote_metrics": {
+        "accuracy": 0.8913260219341974,
+        "auroc": 0.975411139739797,
+        "balanced_accuracy": 0.8908710277698253,
+        "confusion": [
+          [
+            495,
+            9
+          ],
+          [
+            100,
+            399
+          ]
+        ],
+        "n": 1003,
+        "sensitivity": 0.7995991983967936,
+        "specificity": 0.9821428571428571
+      }
+    },
+    "saliency_only": {
+      "fold_accuracies": [
+        0.9130434782608695,
+        0.896981445582941,
+        0.9097202990861257,
+        0.9097202990861257,
+        0.9124653739612189
+      ],
+      "mean_accuracy": 0.9083861791954562,
+      "pooled_slice_metrics": {
+        "accuracy": 0.9083859532513571,
+        "auroc": 0.9724741836210143,
+        "balanced_accuracy": 0.9083544072271528,
+        "confusion": [
+          [
+            8298,
+            774
+          ],
+          [
+            880,
+            8102
+          ]
+        ],
+        "n": 18054,
+        "sensitivity": 0.9020262747717658,
+        "specificity": 0.9146825396825397
+      },
+      "std_accuracy": 0.005864434585866209,
+      "subject_vote_metrics": {
+        "accuracy": 1.0,
+        "auroc": 1.0,
+        "balanced_accuracy": 1.0,
+        "confusion": [
+          [
+            504,
+            0
+          ],
+          [
+            0,
+            499
+          ]
+        ],
+        "n": 1003,
+        "sensitivity": 1.0,
+        "specificity": 1.0
+      }
+    },
+    "texture_only": {
+      "fold_accuracies": [
+        0.9396289116588202,
+        0.9302132373303794,
+        0.9207975630019385,
+        0.9291055109387981,
+        0.925207756232687
+      ],
+      "mean_accuracy": 0.9289905958325246,
+      "pooled_slice_metrics": {
+        "accuracy": 0.9289908053616927,
+        "auroc": 0.9862630046493144,
+        "balanced_accuracy": 0.9288846652741108,
+        "confusion": [
+          [
+            8620,
+            452
+          ],
+          [
+            830,
+            8152
+          ]
+        ],
+        "n": 18054,
+        "sensitivity": 0.9075929637051882,
+        "specificity": 0.9501763668430335
+      },
+      "std_accuracy": 0.006262866496024001,
+      "subject_vote_metrics": {
+        "accuracy": 1.0,
+        "auroc": 1.0,
+        "balanced_accuracy": 1.0,
+        "confusion": [
+          [
+            504,
+            0
+          ],
+          [
+            0,
+            499
+          ]
+        ],
+        "n": 1003,
+        "sensitivity": 1.0,
+        "specificity": 1.0
+      }
+    }
+  },
+  "n_patients": 1003,
+  "n_slices": 18054,
+  "protocol": "slice_level_stratified_5fold_cv",
+  "warning": "Slices of the same patient can appear in both train and test partitions (paper-style evaluation); accuracies are inflated relative to patient-disjoint evaluation."
+}

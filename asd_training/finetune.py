@@ -185,6 +185,8 @@ class FineTunedEncoder:
             total = 0.0
             for start in range(0, len(order), cfg["batch_size"]):
                 batch = [train_entries[i] for i in order[start:start + cfg["batch_size"]]]
+                if len(batch) < 2:
+                    continue                      # BatchNorm1d needs >1 sample in train mode
                 optimizer.zero_grad(set_to_none=True)
                 loss = self._step_loss(batch, train=True)
                 if not torch.isfinite(loss):

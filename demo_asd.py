@@ -27,6 +27,7 @@ from asd_training.saliency import enhance_slice, saliency_stats  # noqa: E402
 from asd_training.texture import slice_texture                  # noqa: E402
 
 MODEL_CANDIDATES = (
+    "models/best_encoder.pt",
     "runs/hybrid/paper2/folds/fold5/encoder.pt",
     "runs/hybrid/paper2/folds/fold4/encoder.pt",
     "runs/hybrid/paper2/folds/fold3/encoder.pt",
